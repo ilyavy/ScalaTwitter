@@ -1,5 +1,18 @@
 # ScalaTwitter
 
+## Build & Run ##
+Prerequisites:
+Scala, Scalatra, sbt should be installed.
+
+```sh
+$ cd scalatraproject
+$ sbt
+> jetty:start
+```
+
+Manually open [http://localhost:8080/](http://localhost:8080/) in your browser.
+
+
 ## Entities
 You can store everything in memory, since it could be a trouble to use persistent storage (but if you
 want and can use it)
