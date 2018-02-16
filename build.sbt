@@ -17,7 +17,9 @@ libraryDependencies ++= Seq(
   "org.eclipse.jetty" % "jetty-webapp" % "9.4.8.v20171121" % "container",
   "javax.servlet" % "javax.servlet-api" % "3.1.0" % "provided",
   "org.scalatra" %% "scalatra-json" % ScalatraVersion,
-  "org.json4s" %% "json4s-jackson" % "3.5.2"
+  "org.json4s" %% "json4s-jackson" % "3.5.2",
+  "com.pauldijou" %% "jwt-core" % "0.14.1",
+  "com.pauldijou" %% "jwt-json4s-jackson" % "0.14.1"
 )
 
 enablePlugins(SbtTwirl)
