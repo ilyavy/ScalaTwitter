@@ -1,7 +1,8 @@
 package com.inno.sierra
 
 import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.util.{Calendar, Date}
+import javax.servlet.http.HttpServletRequest
 
 import org.json4s.JsonDSL._
 import org.json4s._
@@ -12,9 +13,11 @@ import pdi.jwt.{JwtAlgorithm, JwtJson4s}
 class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   implicit val jsonFormats = DefaultFormats
 
+  private val dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm")
   private var messages = Set[Twit]()
   private val users = User.getUsers()
   private val key = "powugpsoavbpiepag" // TODO: generation of a new key each time?
+  private val blackListTokens = scala.collection.mutable.Map[String, Date]()
 
   /**
     * Pass here a JSON that contains
@@ -61,13 +64,27 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     * Pass here the correct token in order to be signed out
     */
   post("/signout") {
+    if (isTokenCorrect(request)) {
+      val token = request.getHeader("Authorization").substring(7)
+      val result = JwtJson4s.decodeJson(token, key, Seq(JwtAlgorithm.HS256))
+      val map = result.get.extract[Map[String, Any]]
 
+      val date = dateFormat.parse(map("timestamp").toString)
+      val calendar = Calendar.getInstance()
+      calendar.setTime(date)
+      calendar.add(Calendar.HOUR,
+            map("expTime").asInstanceOf[BigInt].toInt)
+      blackListTokens.put(token, calendar.getTime())
+
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
   }
 
   /**
     * Pass here a JSON that contains id and message that would be created
     */
-  post("/messages") { // TODO: During each session the token should be checked, if it was not expired
+  post("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     val jValue = parse(request.body)
     val m = jValue.extract[Twit]
 
@@ -79,23 +96,18 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 
   /** It should return created messages */
-  get("/messages") {
+  get("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     contentType = formats("json")
 
-    val token = request.getHeader("Authorization").substring(7)
-    val result = JwtJson4s.decodeJson(token, key, Seq(JwtAlgorithm.HS256))
-    println(result) // TODO: Delete later
-
-    if (result.isFailure) {
-      Conflict("Error 401: Authentication failed.")
-    } else {
-      val jObj = result.get
+    if (isTokenCorrect(request)) {
       messages
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
     }
   }
 
   /** It should return only one message that has same id as :id parameter */
-  get("/messages/:id") {
+  get("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     contentType = formats("json")
     val id = params("id").toInt
     if (messages.isEmpty || !messages.exists(_.id == id)) {
@@ -107,7 +119,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 
   /** It should update message with id the same as :id parameter */
-  put("/messages/:id") {
+  put("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     val id = params("id").toInt
     if (messages.isEmpty || !messages.exists(_.id == id)) {
       NotFound("Error 404. The message with the specified id ("
@@ -126,7 +138,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 
   /** It should delete a message with id the same as :id parameter */
-  delete("/messages/:id") {
+  delete("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     val id = params("id").toInt
     if (messages.isEmpty || !messages.exists(_.id == id)) {
       NotFound("Error 404. The message with the specified id ("
@@ -145,17 +157,40 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     */
   private def signIn(user: User): String = {
     val algorithm = JwtAlgorithm.HS256
-
-    val sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm")
-    val timestamp = sdf.format(Calendar.getInstance().getTime())
+    val timestamp = dateFormat.format(Calendar.getInstance().getTime())
 
     val payload = JObject(("userId", user.id),
       ("email", user.email), ("nickname", user.nickname),
-      ("timestamp", timestamp), ("expTime", "24h")
+      ("timestamp", timestamp), ("expTime", 24) // expTime in hours
     )
 
     val token = JwtJson4s.encode(payload, key, algorithm)
     println(token)
     token
+  }
+
+  /**
+    * Verifies either the specified token is correct or not
+    * @param request  the request, with the token in the header
+    * @return Boolean (true - if correct, false - otherwise)
+    */
+  private def isTokenCorrect(request: HttpServletRequest): Boolean = {
+    val token = request.getHeader("Authorization").substring(7)
+
+    val result = JwtJson4s.decodeJson(token, key, Seq(JwtAlgorithm.HS256))
+    val map = result.get.extract[Map[String, Any]]
+
+    val date = dateFormat.parse(map("timestamp").toString)
+    val calendar = Calendar.getInstance()
+    calendar.setTime(date)
+    calendar.add(Calendar.HOUR,
+          map("expTime").asInstanceOf[BigInt].toInt)
+
+    if (blackListTokens.contains(token) ||
+          Calendar.getInstance().getTime().after(calendar.getTime())) {
+      false
+    } else {
+      result.isSuccess
+    }
   }
 }
