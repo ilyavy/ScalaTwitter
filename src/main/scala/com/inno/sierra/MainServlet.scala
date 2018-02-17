@@ -31,19 +31,43 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       case me: MappingException => Conflict(
         "Error 409: Specified parameters are incorrect.")
       case iae: IllegalArgumentException => Conflict(
-        "Error 409: The message with the same id already exists.")
+        "Error 409: The user with the same email already exists.")
       case e: Exception => e.printStackTrace()
     }
   }
 
-  post("/login") {
-    signIn(users.head)
+  /**
+    * Pass here a JSON that contains
+    * email and password of a User to be signed in
+    */
+  post("/signin") {
+    try {
+      val jValue = parse(request.body)
+      val values = jValue.extract[Map[String, String]]
+      val user = User.getUser(values("email"), values("password"))
+      val token = signIn(user)
+      response.setHeader("Access-Token", token)
+
+    } catch {
+      case me: MappingException => Conflict(
+        "Error 409: Specified parameters are incorrect.")
+      case nsee: java.util.NoSuchElementException => Conflict(
+        "Error 409: The login or the password is invalid.")
+      case e: Exception => e.printStackTrace()
+    }
+  }
+
+  /**
+    * Pass here the correct token in order to be signed out
+    */
+  post("/signout") {
+
   }
 
   /**
     * Pass here a JSON that contains id and message that would be created
     */
-  post("/messages") {
+  post("/messages") { // TODO: During each session the token should be checked, if it was not expired
     val jValue = parse(request.body)
     val m = jValue.extract[Twit]
 

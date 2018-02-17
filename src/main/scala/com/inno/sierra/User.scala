@@ -56,6 +56,7 @@ object User {
     *               in the case of not unique email
     * @return registered User
     */
+  @throws(classOf[IllegalArgumentException])
   def createUser(email: String, nickname: String, password: String): User = {
     val userNoId = UserNoId(email, nickname, password)
     createUser(userNoId)
@@ -79,7 +80,27 @@ object User {
     createUser(userNoId)
   }
 
+  /**
+    * Returns the list of the registered users
+    * @return the list of the registered users
+    */
   def getUsers(): Set[User] = users
+
+  /**
+    * Returns the User with the specified email and password.
+    * @param email  identifier of the User
+    * @param password password, the hash will be calculated
+    * @throws java.util.NoSuchElementException
+    *               in the case of invalid login or/and password
+    * @return the User
+    */
+  @throws(classOf[java.util.NoSuchElementException])
+  def getUser(email: String, password: String): User = {
+    val passHash = MessageDigest.getInstance("MD5")
+      .digest(password.getBytes())
+      .map("%02X".format(_)).mkString
+    users.filter(u => u.email == email && u.password == passHash).head
+  }
 
   /** Helper case class, used for simplification of json parsing */
   private case class UserNoId(email: String, nickname: String, password: String)
