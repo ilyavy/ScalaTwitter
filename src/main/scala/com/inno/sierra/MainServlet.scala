@@ -17,7 +17,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   private var messages = Set[Twit]()
   private val users = User.getUsers()
   private val key = "powugpsoavbpiepag" // TODO: generation of a new key each time?
-  private val blackListTokens = scala.collection.mutable.Map[String, Date]()
+  private var blackListTokens = Map[String, Date]()
 
   /**
     * Pass here a JSON that contains
@@ -64,6 +64,11 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     * Pass here the correct token in order to be signed out
     */
   post("/signout") {
+    // Clear the black list of the expired tokens
+    blackListTokens = blackListTokens.filter(
+          p => p._2.after(Calendar.getInstance().getTime()))
+
+    // Sign out if token is correct
     if (isTokenCorrect(request)) {
       val token = request.getHeader("Authorization").substring(7)
       val result = JwtJson4s.decodeJson(token, key, Seq(JwtAlgorithm.HS256))
@@ -74,7 +79,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       calendar.setTime(date)
       calendar.add(Calendar.HOUR,
             map("expTime").asInstanceOf[BigInt].toInt)
-      blackListTokens.put(token, calendar.getTime())
+      blackListTokens = blackListTokens + (token -> calendar.getTime())
 
     } else {
       Conflict("Error 401: The token is incorrect or expired.")
