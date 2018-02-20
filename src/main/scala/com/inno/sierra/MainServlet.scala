@@ -1,6 +1,7 @@
 package com.inno.sierra
 
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
 import java.util.{Calendar, Date, NoSuchElementException}
 import javax.servlet.http.HttpServletRequest
 
@@ -92,12 +93,18 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     */
   post("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     val jValue = parse(request.body)
-    val m = jValue.extract[Twit]
+    val userId = getIdFromToken(request)
+    val m = Twit((parsedBody \ "id").extract[Int], (parsedBody \ "text").extract[String], users.find(u=>u.id == userId).get, LocalDateTime.now())
 
-    if (messages.exists(_.id == m.id)) {
-      Conflict("Error 409: The message with the same id already exists.")
+    if (isTokenCorrect(request)) {
+      if (messages.exists(_.id == m.id)) {
+        Conflict("Error 409: The message with the same id already exists.")
+      } else {
+        messages = messages + m
+      }
+
     } else {
-      messages = messages + m
+      Conflict("Error 401: The token is incorrect or expired.")
     }
   }
 
