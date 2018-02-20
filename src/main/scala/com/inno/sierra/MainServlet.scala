@@ -150,6 +150,18 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     }
   }
 
+  /** It should return messages of specified user */
+  get("/feed/:id") {
+    contentType = formats("json")
+    val id = params("id").toInt
+
+    if (isTokenCorrect(request)) {
+      messages.filter(_.author.id == id)
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
   /** It should return only one message that has same id as :id parameter */
   get("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     contentType = formats("json")
