@@ -1,7 +1,7 @@
 package com.inno.sierra
 
 import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.{Calendar, Date, NoSuchElementException}
 import javax.servlet.http.HttpServletRequest
 
 import org.json4s.JsonDSL._
@@ -18,6 +18,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   private val users = User.getUsers()
   private val key = "powugpsoavbpiepag" // TODO: generation of a new key each time?
   private var blackListTokens = Map[String, Date]()
+  private var subscriptions = Map[Int, Set[Int]]()
 
   /**
     * Pass here a JSON that contains
@@ -100,12 +101,43 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     }
   }
 
+  /**
+    * Pass here a JSON that contains id of the user you want ot subscribe to
+    */
+  post("/subscribe") {
+    val jValue = parse(request.body)
+    val s = (parsedBody \ "id").extract[Int]
+    if (isTokenCorrect(request)) {
+      val userId = getIdFromToken(request)
+      if(subscriptions contains userId) {
+        subscriptions += userId -> (subscriptions(userId) + s)
+      } else
+        subscriptions += userId -> Set(s)
+
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
   /** It should return created messages */
   get("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     contentType = formats("json")
 
     if (isTokenCorrect(request)) {
       messages
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
+  /** It should return feed for user */
+  get("/feed") {
+    contentType = formats("json")
+
+    if (isTokenCorrect(request)) {
+      val userId = getIdFromToken(request)
+      val userSubscribtions = if(subscriptions contains userId) subscriptions(userId) else Set[Int]()
+      messages.filter(userSubscribtions contains _.author.id)
     } else {
       Conflict("Error 401: The token is incorrect or expired.")
     }
@@ -172,6 +204,14 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     val token = JwtJson4s.encode(payload, key, algorithm)
     println(token)
     token
+  }
+
+  private def getIdFromToken(request: HttpServletRequest) : Int = {
+    val token = request.getHeader("Authorization").substring(7)
+
+    val result = JwtJson4s.decodeJson(token, key, Seq(JwtAlgorithm.HS256))
+    val map = result.get.extract[Map[String, Any]]
+    map("userId").toString.toInt
   }
 
   /**

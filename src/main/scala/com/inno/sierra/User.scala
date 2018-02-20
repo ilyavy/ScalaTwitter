@@ -15,7 +15,7 @@ case class User private (id: Int, email: String,
   override def hashCode() = id
 
   override def equals(that: scala.Any): Boolean = that match {
-    case that: Twit => this.id == that.id
+    case that: User => this.id == that.id
     case _ => false
   }
 }
