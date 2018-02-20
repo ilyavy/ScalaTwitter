@@ -175,21 +175,21 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 
   /** It should update message with id the same as :id parameter */
-  put("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
+  put("/messages/:id") {
     val id = params("id").toInt
-    if (messages.isEmpty || !messages.exists(_.id == id)) {
-      NotFound("Error 404. The message with the specified id ("
-        + id + ") does not exist.")
+    if (isTokenCorrect(request)) {
+      if (messages.isEmpty || !messages.exists(_.id == id)) {
+        NotFound("Error 404. The message with the specified id ("
+          + id + ") does not exist.")
 
+      } else {
+        val mes = messages.filter(_.id == id).head
+        messages = messages - mes
+        val m = Twit(id, (parsedBody \ "text").extract[String], users.find(u=>u.id == getIdFromToken(request)).get, LocalDateTime.now())
+        messages = messages + m
+      }
     } else {
-      val mes = messages.filter(_.id == id).head
-      messages = messages - mes
-
-      val jsonStr = request.body
-      val jValue = parse(jsonStr).asInstanceOf[JObject]
-      // TODO: have to be fixed. [Edit twit] user story
-      //val m = Twit(id, (jValue \ "text").extract[String])
-      //messages = messages + m
+      Conflict("Error 401: The token is incorrect or expired.")
     }
   }
 
