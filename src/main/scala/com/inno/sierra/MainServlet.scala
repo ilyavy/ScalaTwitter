@@ -312,12 +312,14 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       val userId = getIdFromToken(request)
       if (likes.contains(userId)) {
         val twitIds = likes(userId) - id
-        likes = likes + (userId -> (twitIds))
+        likes += (userId -> (twitIds))
       }
       if (dislikes.contains(userId)) {
         val twitIds = dislikes(userId) - id
-        dislikes = dislikes + (userId -> (twitIds))
+        dislikes += (userId -> (twitIds))
       }
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
     }
     println("Likes after: " + likes)
     println("Dislikes after: " + dislikes)
