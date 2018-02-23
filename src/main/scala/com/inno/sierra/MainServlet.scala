@@ -164,6 +164,162 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     }
   }
 
+/**
+    * it should receive an json with the id of message to like
+    * it also will remove dislike if user previously disliked that tweet
+    */
+
+  post("/like") {
+    val jValue = parse(request.body)
+    val twitId = (parsedBody \ "id").extract[Int]
+    val userId = getIdFromToken(request)
+
+    if (isTokenCorrect(request)) {
+        like(userId, twitId)
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+
+    /** Function with a user dislikes a tweet (from other people).
+      *@param uID
+      * @param tID
+      */
+    def like (uID: Int, tID: Int): Unit= {
+
+
+      if (messages.isEmpty || !messages.exists(_.id == tID)) {
+        println("messages exist, continue")
+        //get author from message
+        val m: Twit = messages.filter(_.id == tID).head
+        val author: Int = m.id
+
+        if (!author.equals(uID)) {
+          //check if you already like it
+          if (likes(uID).contains(tID)) {
+            println("twit has been already liked")
+          } else {
+            if (likes.contains(uID)) {
+              println("user has liked messages")
+              likes += uID -> (likes(uID) + tID)
+            }
+            else {
+              println("user hasn't liked any messages")
+              likes += uID -> Set(tID)
+            }
+            //if message has been previously disliked it,
+            // delete it from dislikes
+            likeEliminatesDislike(uID, tID)
+          }
+        } else {
+          println("you cannot like your own message")
+        }
+      } else {
+        Conflict("Error 404: Message cannot be liked" +
+          " because it does not exist!")
+      }
+
+      /**
+        * a user dislikes a previously liked tweet (from other people).
+        * @param userID
+        * @param id
+        */
+      def likeEliminatesDislike(userID: Int, id: Int): Unit = {
+        if (dislikes.contains(userID)) {
+          println("user has dislikes messages before")
+          if (dislikes(userID).contains(id)) {
+            println("twit has been disliked")
+            val x = dislikes(userID) - id
+            dislikes = dislikes + (userID -> x)
+
+          } else {
+            println("twit has not been disliked. Do nothing!")
+          }
+        } else {
+          println("user does not disliked any message")
+        }
+      }
+    }
+  }
+
+  /**
+    * it should receive an json with the id of message to dislike
+    * it also will remove like if user previously liked that tweet
+    */
+  post("/dislike") {
+    val jValue = parse(request.body)
+    val twitId = (parsedBody \ "id").extract[Int]
+    val userId = getIdFromToken(request)
+
+    if (isTokenCorrect(request)) {
+      dislike(userId, twitId)
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+
+    /** Function with a user dislikes a tweet (from other people).
+      *@param uID
+      * @param tID
+      */
+    def dislike (uID: Int, tID: Int): Unit= {
+
+
+      if (messages.isEmpty || !messages.exists(_.id == tID)) {
+        println("messages exist, continue")
+        //get author from message
+        val m: Twit = messages.filter(_.id == tID).head
+        val author: Int = m.id
+
+        if (!author.equals(uID)) {
+          //check if you already like it
+          if (dislikes(uID).contains(tID)) {
+            println("twit has been already liked")
+          } else {
+            if (dislikes.contains(uID)) {
+              println("user has liked messages")
+              dislikes += uID -> (dislikes(uID) + tID)
+            }
+            else {
+              println("user hasn't disliked any messages")
+              dislikes += uID -> Set(tID)
+            }
+            //if message has been previously liked it,
+            // delete it from likes
+            dislikeEliminatesLike(uID, tID)
+          }
+        } else {
+          println("you cannot dislike your own message")
+        }
+      } else {
+        Conflict("Error 404: Message cannot be disliked" +
+          " because it does not exist!")
+      }
+
+      /**
+        * When a user dislikes a tweet (from other people) previously liked, removes like.
+        * @param userID
+        * @param id
+        */
+      def dislikeEliminatesLike(userID: Int, id: Int): Unit = {
+        if (likes.contains(userID)) {
+          println("user has liked messages before")
+          if (likes(userID).contains(id)) {
+            println("twit has been liked")
+            val x = likes(userID) - id
+            likes = likes + (userID -> x)
+            println("like has been deleted")
+          } else {
+            println("twit has not been liked. Do nothing!")
+          }
+        } else {
+          println("user does not liked any message")
+        }
+      }
+    }
+
+
+  }	
+	
+	
   /**
     * Pass here a JSON that contains id of the user you want ot subscribe to
     */
