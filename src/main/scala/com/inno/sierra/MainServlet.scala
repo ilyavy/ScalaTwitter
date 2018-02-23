@@ -323,7 +323,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     * on - String, turn the setting on
     * off - String, turn the setting off
     */
-  post("/mentions_setting:value") {
+  post("/mentions_setting/:value") {
     if (isTokenCorrect(request)) {
       val userId = getIdFromToken(request)
       val user = User.getUsers().filter(_.id == userId).head
