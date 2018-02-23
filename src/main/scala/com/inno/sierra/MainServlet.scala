@@ -198,7 +198,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       val userSubscribtions =
         if(subscriptions contains userId) subscriptions(userId)
         else Set[Int]()
-      messages.filter(userSubscribtions contains _.author.id)
+      messages.filter(userSubscribtions contains _.author.id) union messages.filter(retweets contains _.author.id)
     } else {
       Conflict("Error 401: The token is incorrect or expired.")
     }
