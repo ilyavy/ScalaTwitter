@@ -98,11 +98,9 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   post("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     val jValue = parse(request.body)
     val userId = getIdFromToken(request)
-    val m = Twit(
-      (parsedBody \ "id").extract[Int],
+    val m = Twit.createTwit(
       (parsedBody \ "text").extract[String],
-      users.find(u=>u.id == userId).get,
-      Calendar.getInstance().getTime()
+      users.find(u=>u.id == userId).get
     )
 
     if (isTokenCorrect(request)) {
@@ -401,9 +399,10 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       } else {
         val mes = messages.filter(_.id == id).head
         messages = messages - mes
-        val m = Twit(id, (parsedBody \ "text").extract[String],
-          users.find(u=>u.id == getIdFromToken(request)).get,
-          Calendar.getInstance().getTime())
+        val m = Twit.createTwit(
+          (parsedBody \ "text").extract[String],
+          users.find(u=>u.id == getIdFromToken(request)).get
+        )
         messages = messages + m
       }
     } else {
