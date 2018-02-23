@@ -22,6 +22,8 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   private var retweets = Map[Int, Set[Int]]() //to add retweets
   // userId mentioned, the set of twit ids
   private var mentions = Map[Int, Set[Int]]()
+  private var likes =  Map[Int, Set[Int]]()
+  private var dislikes =  Map[Int, Set[Int]]()	
 
   /**
     * Pass here a JSON that contains
