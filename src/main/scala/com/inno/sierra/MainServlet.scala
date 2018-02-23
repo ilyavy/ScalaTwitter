@@ -172,6 +172,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     val jValue = parse(request.body)
     val twitId = (parsedBody \ "id").extract[Int]
     val userId = getIdFromToken(request)
+    println("I am " + userId)
 
     if (isTokenCorrect(request)) {
         like(userId, twitId)
@@ -185,29 +186,21 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       */
     def like (uID: Int, tID: Int): Unit= {
 
-      if (messages.isEmpty || !messages.exists(_.id == tID)) {
-        println("messages exist, continue")
+      if (!messages.isEmpty && messages.exists(_.id == tID)) {
         //get author from message
         val m: Twit = messages.filter(_.id == tID).head
-        val author: Int = m.id
+        val author: Int = m.author.id
+        println("I want to like twit of " + author)
 
         if (!author.equals(uID)) {
-          //check if you already like it
-          if (likes(uID).contains(tID)) {
-            println("twit has been already liked")
-          } else {
-            if (likes.contains(uID)) {
-              println("user has liked messages")
-              likes += uID -> (likes(uID) + tID)
-            }
-            else {
-              println("user hasn't liked any messages")
-              likes += uID -> Set(tID)
-            }
-            //if message has been previously disliked it,
-            // delete it from dislikes
-            likeEliminatesDislike(uID, tID)
-          }
+          val userLikes =
+            if (likes.contains(uID)) likes(uID)
+            else Set[Int]()
+          likes += uID -> (userLikes + tID)
+          println("Likes: " + likes)
+          //if message has been previously disliked it,
+          // delete it from dislikes
+          likeEliminatesDislike(uID, tID)
         } else {
           println("you cannot like your own message")
         }
@@ -260,29 +253,21 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       */
     def dislike (uID: Int, tID: Int): Unit= {
 
-      if (messages.isEmpty || !messages.exists(_.id == tID)) {
+      if (!messages.isEmpty && messages.exists(_.id == tID)) {
         println("messages exist, continue")
         //get author from message
         val m: Twit = messages.filter(_.id == tID).head
-        val author: Int = m.id
+        val author: Int = m.author.id
 
         if (!author.equals(uID)) {
-          //check if you already like it
-          if (dislikes(uID).contains(tID)) {
-            println("twit has been already liked")
-          } else {
-            if (dislikes.contains(uID)) {
-              println("user has liked messages")
-              dislikes += uID -> (dislikes(uID) + tID)
-            }
-            else {
-              println("user hasn't disliked any messages")
-              dislikes += uID -> Set(tID)
-            }
-            //if message has been previously liked it,
-            // delete it from likes
-            dislikeEliminatesLike(uID, tID)
-          }
+          val userLikes =
+            if (dislikes.contains(uID)) dislikes(uID)
+            else Set[Int]()
+          dislikes += uID -> (userLikes + tID)
+          println("Dislikes: " + dislikes)
+          //if message has been previously liked it,
+          // delete it from likes
+          dislikeEliminatesLike(uID, tID)
         } else {
           println("you cannot dislike your own message")
         }
@@ -312,8 +297,31 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
         }
       }
     }
-  }	
-	
+  }
+
+  /**
+    * Removes likes and dislikes.
+    * Takes one parameter - the id of the twit,
+    * like/dislike for which should be removed.
+    */
+  post("/removelike/:id") {
+    println("Likes before: " + likes)
+    println("Dislikes before: " + dislikes)
+    val id = params("id").toInt
+    if (isTokenCorrect(request)) {
+      val userId = getIdFromToken(request)
+      if (likes.contains(userId)) {
+        val twitIds = likes(userId) - id
+        likes = likes + (userId -> (twitIds))
+      }
+      if (dislikes.contains(userId)) {
+        val twitIds = dislikes(userId) - id
+        dislikes = dislikes + (userId -> (twitIds))
+      }
+    }
+    println("Likes after: " + likes)
+    println("Dislikes after: " + dislikes)
+  }
 	
   /**
     * Pass here a JSON that contains id of the user you want ot subscribe to
