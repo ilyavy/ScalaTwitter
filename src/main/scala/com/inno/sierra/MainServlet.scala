@@ -20,7 +20,10 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   private val key = "powugpsoavbpiepag" // TODO: generation of a new key each time?
   private var blackListTokens = Map[String, Date]()
   private var subscriptions = Map[Int, Set[Int]]()
-  private var retweets =  Map[Int, Set[Int]]() //to add retweets
+  private var retweets = Map[Int, Set[Int]]() //to add retweets
+  // userId mentioned, the set of twit ids
+  private var mentions = Map[Int, Set[Int]]()
+
   /**
     * Pass here a JSON that contains
     * email, nickname, password of a User to be registered
@@ -192,7 +195,9 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
 
     if (isTokenCorrect(request)) {
       val userId = getIdFromToken(request)
-      val userSubscribtions = if(subscriptions contains userId) subscriptions(userId) else Set[Int]()
+      val userSubscribtions =
+        if(subscriptions contains userId) subscriptions(userId)
+        else Set[Int]()
       messages.filter(userSubscribtions contains _.author.id)
     } else {
       Conflict("Error 401: The token is incorrect or expired.")
@@ -256,6 +261,76 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 
   /**
+    * Mentions the user by his/her nickname if the option
+    * "Notify me when somebody mentions me" is turned on.
+    * Takes the json with two parameters:
+    * twit_id - Int, the id of the twin to be mentioned in
+    * nickname - String, the nickname of the user mentioned
+    */
+  post("/mention") {
+    if (isTokenCorrect(request)) {
+      try {
+        val jValue = parse(request.body)
+        val values = jValue.extract[Map[String, Any]]
+        val nick = values("nickname").toString
+        val userId = User.getUsers().filter(_.nickname == nick).head.id
+
+        val twitIds =
+          if (mentions.contains(userId)) mentions(userId)
+          else Set[Int]()
+        mentions = mentions +
+          (userId -> (twitIds + values("twit_id").toString.toInt))
+      } catch {
+        case me: MappingException => Conflict(
+          "Error 409: Specified parameters are incorrect.")
+        case nsee: NoSuchElementException => Conflict(
+          "Error 409: There is no such user."
+        )
+        case e: Exception => e.printStackTrace()
+      }
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
+  /**
+    * Returns the feed with the twits, where user
+    * was mentioned.
+    */
+  get("/mentions_feed") {
+    contentType = formats("json")
+
+    if (isTokenCorrect(request)) {
+      val userId = getIdFromToken(request)
+      if (mentions.contains(userId)) {
+        val twitIds = mentions(userId)
+        messages.filter(t => twitIds.contains(t.id))
+      }
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
+  /**
+    * Turns the setting "Notify me when somebody mentions me"
+    * on or off. Takes one parameter:
+    * on - String, turn the setting on
+    * off - String, turn the setting off
+    */
+  post("/mentions_setting:value") {
+    if (isTokenCorrect(request)) {
+      val userId = getIdFromToken(request)
+      val user = User.getUsers().filter(_.id == userId).head
+      params("value").toString match {
+        case "on" => user.mentionsOn(true)
+        case "off" => user.mentionsOn(false)
+      }
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
+  /**
     * Creates token for the specified User
     * @param user for whom to create a token
     * @return token
@@ -274,6 +349,12 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     token
   }
 
+  /**
+    * Returns id from the token by the request.
+    * Token is supposed to be in the header "Authorization"
+    * @param request  the request with token
+    * @return id of the user, who owns the token
+    */
   private def getIdFromToken(request: HttpServletRequest) : Int = {
     val token = request.getHeader("Authorization").substring(7)
 
