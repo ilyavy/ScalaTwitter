@@ -1,7 +1,6 @@
 package com.inno.sierra
 
 import java.text.SimpleDateFormat
-import java.time.LocalDateTime
 import java.util.{Calendar, Date, NoSuchElementException}
 import javax.servlet.http.HttpServletRequest
 
@@ -97,7 +96,12 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   post("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
     val jValue = parse(request.body)
     val userId = getIdFromToken(request)
-    val m = Twit((parsedBody \ "id").extract[Int], (parsedBody \ "text").extract[String], users.find(u=>u.id == userId).get, LocalDateTime.now())
+    val m = Twit(
+      (parsedBody \ "id").extract[Int],
+      (parsedBody \ "text").extract[String],
+      users.find(u=>u.id == userId).get,
+      Calendar.getInstance().getTime()
+    )
 
     if (isTokenCorrect(request)) {
       if (messages.exists(_.id == m.id)) {
@@ -239,7 +243,9 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       } else {
         val mes = messages.filter(_.id == id).head
         messages = messages - mes
-        val m = Twit(id, (parsedBody \ "text").extract[String], users.find(u=>u.id == getIdFromToken(request)).get, LocalDateTime.now())
+        val m = Twit(id, (parsedBody \ "text").extract[String],
+          users.find(u=>u.id == getIdFromToken(request)).get,
+          Calendar.getInstance().getTime())
         messages = messages + m
       }
     } else {
@@ -322,8 +328,8 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       val userId = getIdFromToken(request)
       val user = User.getUsers().filter(_.id == userId).head
       params("value").toString match {
-        case "on" => user.mentionsOn(true)
-        case "off" => user.mentionsOn(false)
+        case "on" => user.notifyWhenMentioned(true)
+        case "off" => user.notifyWhenMentioned(false)
       }
     } else {
       Conflict("Error 401: The token is incorrect or expired.")

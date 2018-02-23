@@ -1,9 +1,10 @@
 package com.inno.sierra
 
 import java.time._
+import java.util.Date
 
 case class Twit(id: Int, text: String,
-                author: User, submitted: LocalDateTime) {
+                author: User, submitted: Date) {
 
   override def hashCode() = id
 
