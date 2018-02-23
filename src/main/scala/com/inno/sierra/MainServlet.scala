@@ -20,7 +20,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   private val key = "powugpsoavbpiepag" // TODO: generation of a new key each time?
   private var blackListTokens = Map[String, Date]()
   private var subscriptions = Map[Int, Set[Int]]()
-
+  private var retweets =  Map[Int, Set[Int]]() //to add retweets
   /**
     * Pass here a JSON that contains
     * email, nickname, password of a User to be registered
@@ -103,6 +103,55 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
         messages = messages + m
       }
 
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
+  /**
+    * Pass here a JSON that contains id of tweet you want to retweet
+    */
+
+  post("/retweet") {
+    val jValue = parse(request.body)
+    val twitId = (parsedBody \ "id").extract[Int]
+	  val userId = getIdFromToken(request)
+
+	if (isTokenCorrect(request)) {
+      	if (messages.exists(_.id == twitId)) {
+			if(retweets contains userId){
+		        retweets += userId -> (retweets(userId) + twitId) 
+			}else {retweets += userId -> Set(twitId) }
+      	} else {     
+		Conflict("Error 404: The message does not exist.")
+      	}
+ 
+    } else {
+      Conflict("Error 401: The token is incorrect or expired.")
+    }
+  }
+
+  /** Remove retweet of a message*/
+  delete("/retweet/:id") {
+    val id = params("id").toInt
+    val userId = getIdFromToken(request)
+
+    if (isTokenCorrect(request)) {
+      if (messages.isEmpty || !messages.exists(_.id == id)) {
+        NotFound("Error 404. The message with the specified id ("
+          + id + ") does not exist.")
+      } else {
+          if (retweets.contains(userId)){
+            if (retweets(userId).contains(id)){
+                val x=retweets(userId)-id
+                retweets =retweets + (userId->x)
+              }else {
+                Conflict("Error 404: Message has not been retweeted.")
+                }
+            } else {
+                Conflict("Error 404: There are no retweets.")
+                }
+        }
     } else {
       Conflict("Error 401: The token is incorrect or expired.")
     }
