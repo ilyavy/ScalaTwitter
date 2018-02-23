@@ -16,7 +16,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   private val dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm")
   private var messages = Set[Twit]()
   private val users = User.getUsers()
-  private val key = "powugpsoavbpiepag" // TODO: generation of a new key each time?
+  private val key = "powugpsoavbpiepag"
   private var blackListTokens = Map[String, Date]()
   private var subscriptions = Map[Int, Set[Int]]()
   private var retweets = Map[Int, Set[Int]]() //to add retweets
@@ -95,7 +95,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   /**
     * Pass here a JSON that contains id and message that would be created
     */
-  post("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
+  post("/messages") {
     val jValue = parse(request.body)
     val userId = getIdFromToken(request)
     val m = Twit.createTwit(
@@ -164,11 +164,10 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     }
   }
 
-/**
+  /**
     * it should receive an json with the id of message to like
     * it also will remove dislike if user previously disliked that tweet
     */
-
   post("/like") {
     val jValue = parse(request.body)
     val twitId = (parsedBody \ "id").extract[Int]
@@ -185,7 +184,6 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       * @param tID
       */
     def like (uID: Int, tID: Int): Unit= {
-
 
       if (messages.isEmpty || !messages.exists(_.id == tID)) {
         println("messages exist, continue")
@@ -262,7 +260,6 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       */
     def dislike (uID: Int, tID: Int): Unit= {
 
-
       if (messages.isEmpty || !messages.exists(_.id == tID)) {
         println("messages exist, continue")
         //get author from message
@@ -315,8 +312,6 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
         }
       }
     }
-
-
   }	
 	
 	
@@ -333,17 +328,6 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
       } else
         subscriptions += userId -> Set(s)
 
-    } else {
-      Conflict("Error 401: The token is incorrect or expired.")
-    }
-  }
-
-  /** It should return created messages */
-  get("/messages") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
-    contentType = formats("json")
-
-    if (isTokenCorrect(request)) {
-      messages
     } else {
       Conflict("Error 401: The token is incorrect or expired.")
     }
@@ -376,18 +360,6 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
     }
   }
 
-  /** It should return only one message that has same id as :id parameter */
-  get("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
-    contentType = formats("json")
-    val id = params("id").toInt
-    if (messages.isEmpty || !messages.exists(_.id == id)) {
-      NotFound("Error 404. The message with the specified id ("
-        + id + ") does not exist.")
-    } else {
-      messages.filter(_.id == id).head
-    }
-  }
-
   /** It should update message with id the same as :id parameter */
   put("/messages/:id") {
     val id = params("id").toInt
@@ -411,7 +383,7 @@ class MainServlet extends ScalatraServlet with JacksonJsonSupport {
   }
 
   /** It should delete a message with id the same as :id parameter */
-  delete("/messages/:id") { // TODO: Do not forget to use isTokenCorrect(), the example in get("/messages")
+  delete("/messages/:id") {
     val id = params("id").toInt
     if (messages.isEmpty || !messages.exists(_.id == id)) {
       NotFound("Error 404. The message with the specified id ("
