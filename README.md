@@ -1,4 +1,4 @@
-# ScalaTwitter
+# ScalaTwitter - Team Sierra #
 
 ## Build & Run ##
 Prerequisites:
@@ -13,7 +13,50 @@ $ sbt
 Manually open [http://localhost:8080/](http://localhost:8080/) in your browser.
 
 
-## Entities
+## Postman script ##
+https://www.getpostman.com/collections/55f8a9063d7867c067f8
+
+There are number of requests that can be executed one by one or independently. 
+Registration and singin should be executed first, after executing signin postman local variable with token will be created - token1 for user1 and token2 for user2. Then those tokens will be available among the other requests.
+
+
+## Functionality ##
+
+●	post(“/register”) – pass to this method email, nickname, password of a User to be registered. Email and nickname should be unique.
+
+●	post(“/signin”) – pass to this method email and password. User should be registered.
+
+●	post(“/signout”) – sign out, user should be logged in.
+
+●	post(“/messages”) – the server anticipated to receive the message encoded in JSON with “text”. It will add the message to the collection of messages and will return 200 HTTP code.
+
+●	put(“/messages/:id”) – the server anticipates to receive the message encoded in JSON with one field “text”. If the message with the specified id already exists in the collection, the server will update the text of this message with the new one, if not – return 404 HTTP code.
+
+●	delete(“/messages/:id”) – the server will delete from the collection the message with the specified id, if it exists, if not – it will return 404 HTTP code.
+
+●	post(“/retweet”) – the server anticipated to receive the message encoded in JSON with “id”. It will add the message to the collection of retweets and will return 200 HTTP code.
+
+●	delete("/retweet/:id") - the server will delete from the collection the retweet with the specified id, if it exists, if not – it will return 404 HTTP code.
+
+●	post(“/like”) – the server anticipated to receive the message encoded in JSON with “id”. It will add the message to the collection of retweets and will return 200 HTTP code. Dislike form this message will be removed if it was there.
+
+●	post(“/dislike”) – the server anticipated to receive the message encoded in JSON with “id”. It will add the message to the collection of retweets and will return 200 HTTP code. Like form this message will be removed if it was there.
+
+●	post(“/removelike/:id”) - remove user’s like/dislike of the twit with the specified id.
+
+●	post(“/subscribe”) – the server anticipated to receive the message encoded in JSON with “id” of user to subscribe. Corresponding tuple will be added to the subscriptions.
+
+●	get("/feed") - returns feed of the user.
+
+●	post("/mention") - pass “twit_id” and “nickname” to this method.
+
+●	get("/mentions_feed") - returns list of messages in which user was mentioned when the corresponding setting was on.
+
+●	post("/mentions_setting/:value") - value should be “on” or “off” to disable or enable mentioning of user in messages.
+
+
+
+## Requirements
 You can store everything in memory, since it could be a trouble to use persistent storage (but if you
 want and can use it)
 
